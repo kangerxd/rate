@@ -24,14 +24,13 @@ jobs:
         echo "Exchange rate is $EXCHANGE_RATE"
         echo "::set-output name=rate::$EXCHANGE_RATE"
 
-    - name: Compare and Notify
+    - name: Send Telegram notification
       if: ${{ steps.fetch-rate.outputs.rate && steps.fetch-rate.outputs.rate > env.THRESHOLD_RATE }}
       env:
         TG_BOT_TOKEN: ${{ secrets.TG_BOT_TOKEN }}
-        TG_ID: ${{ secrets.TG_ID }}
+        TG_GROUP: ${{ secrets.TG_GROUP }}
         THRESHOLD_RATE: ${{ secrets.THRESHOLD_RATE }}
       run: |
-        # Send Telegram notification
         curl -s -X POST "https://api.telegram.org/bot${TG_BOT_TOKEN}/sendMessage" \
           -H "Content-Type: application/json" \
-          -d '{"chat_id": "${TG_ID}", "text": "Alert: CAD to INR exchange rate is now '${{ steps.fetch-rate.outputs.rate }}'!"}'
+          -d '{"chat_id": "${TG_GROUP}", "text": "Alert: CAD to INR exchange rate is now '${{ steps.fetch-rate.outputs.rate }}'!"}'
