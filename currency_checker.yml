@@ -1,0 +1,37 @@
+name: Currency Checker
+
+on:
+  schedule:
+    - cron: "*/15 * * * *"  # Runs every 15 minutes
+  workflow_dispatch:  # Allows manual triggering
+
+jobs:
+  check_currency:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v3
+
+    - name: Fetch exchange rate
+      id: fetch-rate
+      run: |
+        # Fetch the current exchange rate
+        RESPONSE=$(curl -s https://api.exchangerate-api.com/v4/latest/CAD)
+        EXCHANGE_RATE=$(echo $RESPONSE | jq '.rates.INR')
+
+        # Set the exchange rate as an output variable
+        echo "Exchange rate is $EXCHANGE_RATE"
+        echo "::set-output name=rate::$EXCHANGE_RATE"
+
+    - name: Compare and Notify
+      if: ${{ steps.fetch-rate.outputs.rate && steps.fetch-rate.outputs.rate > env.THRESHOLD_RATE }}
+      env:
+        TG_BOT_TOKEN: ${{ secrets.TG_BOT_TOKEN }}
+        TG_ID: ${{ secrets.TG_ID }}
+        THRESHOLD_RATE: ${{ secrets.THRESHOLD_RATE }}
+      run: |
+        # Send Telegram notification
+        curl -s -X POST "https://api.telegram.org/bot${TG_BOT_TOKEN}/sendMessage" \
+          -H "Content-Type: application/json" \
+          -d '{"chat_id": "${TG_ID}", "text": "Alert: CAD to INR exchange rate is now '${{ steps.fetch-rate.outputs.rate }}'!"}'
